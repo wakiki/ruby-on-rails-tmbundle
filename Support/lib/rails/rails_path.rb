@@ -12,14 +12,26 @@ require 'rails/inflector'
 require 'fileutils'
 
 module AssociationMessages
+  # @@associations = {
+  #   :controller => [:functional_test, :helper, :model, :javascript, :stylesheet, :fixture],
+  #   :helper => [:controller, :model, :unit_test, :functional_test, :javascript, :stylesheet, :fixture],
+  #   :view => [:controller, :javascript, :stylesheet, :helper, :model],
+  #   :model => [:unit_test, :functional_test, :controller, :helper, :fixture],
+  #   :fixture => [:unit_test, :functional_test, :controller, :helper, :model],
+  #   :functional_test => [:controller, :helper, :model, :unit_test, :fixture],
+  #   :unit_test => [:model, :controller, :helper, :functional_test, :fixture],
+  #   :javascript => [:helper, :controller],
+  #   :stylesheet => [:helper, :controller]
+  # }
+
   @@associations = {
-    :controller => [:functional_test, :helper, :model, :javascript, :stylesheet, :fixture],
-    :helper => [:controller, :model, :unit_test, :functional_test, :javascript, :stylesheet, :fixture],
+    :controller => [:controller_spec, :helper, :model, :javascript, :stylesheet, :fixture],
+    :helper => [:controller, :model, :model_spec, :controller_spec, :javascript, :stylesheet, :fixture],
     :view => [:controller, :javascript, :stylesheet, :helper, :model],
-    :model => [:unit_test, :functional_test, :controller, :helper, :fixture],
-    :fixture => [:unit_test, :functional_test, :controller, :helper, :model],
-    :functional_test => [:controller, :helper, :model, :unit_test, :fixture],
-    :unit_test => [:model, :controller, :helper, :functional_test, :fixture],
+    :model => [:model_spec, :controller_spec, :controller, :helper, :fixture],
+    :fixture => [:model_spec, :controller_spec, :controller, :helper, :model],
+    :controller_spec => [:controller, :helper, :model, :model_spec, :fixture],
+    :model_spec => [:model, :controller, :helper, :controller_spec, :fixture],
     :javascript => [:helper, :controller],
     :stylesheet => [:helper, :controller]
   }
@@ -98,9 +110,9 @@ class RailsPath
     case file_type
     when :controller then name.sub!(/_controller$/, '')
     when :helper     then name.sub!(/_helper$/, '')
-    when :unit_test  then name.sub!(/_test$/, '')
+    when :model_spec  then name.sub!(/_spec$/, '')
     when :view       then name = dirname.split('/').pop
-    when :functional_test then name.sub!(/_controller_test$/, '')
+    when :controller_spec then name.sub!(/_controller_spec$/, '')
     else
       if !File.file?(File.join(rails_root, stubs[:controller], '/', name + '_controller.rb'))
         name = Inflector.pluralize(name)
@@ -116,7 +128,7 @@ class RailsPath
         buffer.find_method(:direction => :backward).last rescue nil
       when :view
         basename
-      when :functional_test
+      when :controller_spec
         buffer.find_method(:direction => :backward).last.sub('^test_', '')
       else nil
       end
@@ -152,8 +164,8 @@ class RailsPath
       when %r{/views/(.+\.(#{VIEW_EXTENSIONS * '|'}))$} then :view
       when %r{/models/(.+\.(rb))$}                      then :model
       when %r{/.+/fixtures/(.+\.(yml|csv))$}            then :fixture
-      when %r{/test/functional/(.+\.(rb))$}             then :functional_test
-      when %r{/test/unit/(.+\.(rb))$}                   then :unit_test
+      when %r{/spec/controllers/(.+_controller_spec\.(rb))$}   then :controller_spec
+      when %r{/spec/models/(.+\.(rb))$}                   then :model_spec
       when %r{/public/javascripts/(.+\.(js))$}          then :javascript
       when %r{/public/stylesheets/(?:sass/)?(.+\.(css|sass))$}  then :stylesheet
       else nil
@@ -202,8 +214,8 @@ class RailsPath
          map { |name| name + '_controller' }
       end
     when :helper     then controller_name + '_helper'
-    when :functional_test then controller_name + '_controller_test'
-    when :unit_test  then Inflector.singularize(controller_name) + '_test'
+    when :controller_spec then controller_name + '_controller_spec'
+    when :model_spec  then Inflector.singularize(controller_name) + '_spec'
     when :model      then Inflector.singularize(controller_name)
     when :fixture    then Inflector.pluralize(controller_name)
     else controller_name
@@ -305,8 +317,8 @@ class RailsPath
       :log => 'log',
       :javascript => 'public/javascripts',
       :stylesheet => wants_haml ? 'public/stylesheets/sass' : 'public/stylesheets',
-      :functional_test => 'test/functional',
-      :unit_test => 'test/unit',
+      :controller_spec => 'spec/controllers',
+      :model_spec => 'spec/models',
       :fixture => 'test/fixtures'}
   end
 
